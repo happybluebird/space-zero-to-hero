@@ -51,13 +51,74 @@ if 'scheduler_started' not in st.session_state:
     st.session_state['scheduler_started'] = True
 
 # --- [4. UI 디자인] ---
+# 1. 페이지 설정 (이게 가장 먼저 나와야 합니다!)
 st.set_page_config(page_title="우주 기지: Zero to Hero", page_icon="🚀", layout="wide")
 
+# 2. 유성우 테마 디자인 적용 (CSS)
+st.markdown("""
+<style>
+    /* 배경 및 전체 폰트 설정 */
+    .stApp {
+        background-image: linear-gradient(rgba(0, 8, 20, 0.8), rgba(0, 8, 20, 0.8)), url('https://i.imgur.com/8Z9gG2j.jpg');
+        background-size: cover;
+        background-attachment: fixed;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #E0E0E0;
+    }
+    
+    /* 제목 스타일 */
+    h1 {
+        color: #FFFFFF;
+        text-align: center;
+        font-weight: 800;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    /* 사이드바 스타일 */
+    [data-testid="stSidebar"] {
+        background-color: rgba(10, 25, 48, 0.9);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* 버튼 스타일 (로켓 발사) */
+    div.stButton > button {
+        background: linear-gradient(135deg, #FF4500, #FFD700);
+        color: #000814;
+        border: none;
+        border-radius: 980px;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: 800;
+        box-shadow: 0 4px 15px rgba(255, 69, 0, 0.4);
+        width: 100%;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-3px);
+        filter: brightness(1.1);
+    }
+    div.stButton > button::before {
+        content: "🚀 ";
+        margin-right: 8px;
+    }
+
+    /* 메시지 박스 스타일 */
+    div[data-testid="stAlert"] {
+        background-color: rgba(10, 25, 48, 0.6);
+        border-left: 5px solid #FFD700;
+        border-radius: 18px;
+        backdrop-filter: blur(10px);
+        color: #E0E0E0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# 3. 화면 구성 요소 (날짜 선택기 등)
 st.title("🌌 우주 기지 컨트롤 센터")
 
 st.sidebar.title("📅 날짜 설정")
 st.sidebar.info("👇 아래 달력 아이콘을 눌러보세요")
 
+# 날짜 선택 기능 (이게 있어야 작동합니다!)
 selected_date = st.sidebar.date_input(
     "날짜를 선택하세요", 
     date.today()
