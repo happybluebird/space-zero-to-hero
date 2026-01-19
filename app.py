@@ -59,7 +59,8 @@ st.markdown("""
 <style>
     /* 배경 및 전체 폰트 설정 */
     .stApp {
-        background-image: linear-gradient(rgba(0, 8, 20, 0.8), rgba(0, 8, 20, 0.8)), url('https://i.imgur.com/8Z9gG2j.jpg');
+        /* NASA의 멋진 성운 사진 (임시 대체용) */
+background-image: linear-gradient(rgba(0, 8, 20, 0.8), rgba(0, 8, 20, 0.8)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
         background-size: cover;
         background-attachment: fixed;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
