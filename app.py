@@ -8,9 +8,12 @@ import time
 from datetime import date
 
 # --- [1. 설정 및 키 입력] ---
-# ⚠️ 여기에 진짜 API 키를 다시 입력해주세요!
-NASA_KEY = '실제_키_abcd123...'
-GEMINI_KEY = '실제_키_xyz987...'
+try:
+    NASA_KEY = st.secrets["NASA_KEY"]
+    GEMINI_KEY = st.secrets["GEMINI_KEY"]
+except FileNotFoundError:
+    st.error("설정된 키가 없습니다. Streamlit Secrets에 키를 등록해주세요.")
+    st.stop()
 
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('models/gemini-flash-latest')
