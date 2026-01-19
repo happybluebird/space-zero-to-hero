@@ -8,6 +8,7 @@ import time
 from datetime import date
 
 # --- [1. 설정 및 키 입력] ---
+# ⚠️ 여기에 진짜 API 키를 다시 입력해주세요!
 NASA_KEY = '실제_키_abcd123...'
 GEMINI_KEY = '실제_키_xyz987...'
 
@@ -51,27 +52,20 @@ st.set_page_config(page_title="우주 기지: Zero to Hero", page_icon="🚀", l
 
 st.title("🌌 우주 기지 컨트롤 센터")
 
-# 📍 [수정 핵심] 날짜 선택기를 아주 단순하고 명확하게 바꿨습니다!
-# 사이드바가 아니라, 잘 보이는지 확인하기 위해 우선 '본문 상단'에 배치해볼까요?
-# 아니요, 사이드바를 고집하되 표준형으로 넣겠습니다.
-
-st.sidebar.title("📅 날짜 설정") # 큰 제목
+st.sidebar.title("📅 날짜 설정")
 st.sidebar.info("👇 아래 달력 아이콘을 눌러보세요")
 
-# label_visibility 옵션을 삭제하여 기본 모양으로 되돌렸습니다.
 selected_date = st.sidebar.date_input(
     "날짜를 선택하세요", 
     date.today()
 )
 
-st.sidebar.write(f"선택된 날짜: **{selected_date}**") # 잘 선택됐는지 눈으로 확인하는 텍스트
-
+st.sidebar.write(f"선택된 날짜: **{selected_date}**")
 st.sidebar.markdown("---")
 st.sidebar.header("🎨 에디터 모드")
 force_refresh = st.sidebar.checkbox("🔄 저장된 문구 무시하고 다시 쓰기")
 
 # --- [5. 메인 로직] ---
-# 버튼을 더 크게 만들어서 눈에 띄게 합니다.
 if st.button('🚀 우주 기지와 통신 시작 (Click Me)', use_container_width=True, type="primary"):
     
     conn = get_db_connection()
@@ -89,8 +83,12 @@ if st.button('🚀 우주 기지와 통신 시작 (Click Me)', use_container_wid
         with st.spinner('🛰️ NASA와 통신 중...'):
             try:
                 nasa_url = f'https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}'
-                res = requests.get(nasa_url).json()
                 
+                # [수정된 부분] 응답을 먼저 받고 상태를 확인합니다.
+                response = requests.get(nasa_url)
+                res = response.json()
+                
+                # 정상적으로 이미지 URL이 있는 경우
                 if 'url' in res:
                     title = res.get('title', '무제')
                     explanation = res.get('explanation', '')
@@ -106,11 +104,16 @@ if st.button('🚀 우주 기지와 통신 시작 (Click Me)', use_container_wid
                     cursor.execute("INSERT OR REPLACE INTO space_logs (date, title, explanation, ai_message, url) VALUES (?, ?, ?, ?, ?)",
                                    (str(selected_date), title, explanation, ai_message, url))
                     conn.commit()
+                    
+                # [여기가 핵심] 데이터가 없을 때 진짜 이유를 화면에 보여줍니다.
                 else:
-                    st.error("해당 날짜의 데이터가 없습니다.")
+                    st.error(f"🚨 NASA 통신 에러! 상태 코드: {response.status_code}")
+                    st.write("▼ 아래 메시지를 복사해서 알려주세요:")
+                    st.code(res) # 에러 내용을 그대로 보여줌
                     st.stop()
+
             except Exception as e:
-                st.error(f"오류: {e}")
+                st.error(f"시스템 오류 발생: {e}")
                 st.stop()
     
     conn.close()
