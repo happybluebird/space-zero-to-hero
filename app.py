@@ -57,6 +57,7 @@ st.markdown("""
 <style>
     /* 1. 배경 및 전체 폰트 */
     .stApp {
+        /* 배경 이미지 주소: 필요하면 이곳을 수정하세요 */
         background-image: linear-gradient(rgba(5, 10, 20, 0.9), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
         background-size: cover;
         background-attachment: fixed;
@@ -129,6 +130,9 @@ st.markdown("""
         font-size: 0.8rem;
         color: #666;
     }
+    .footer strong {
+        color: #d4af37;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,9 +149,6 @@ selected_date = st.sidebar.date_input(
 )
 
 st.sidebar.write(f"선택된 좌표: **{selected_date}**")
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 관리자 모드")
-force_refresh = st.sidebar.checkbox("🔄 데이터 재수신 (Cache Clear)")
 
 # --- [5. 메인 로직] ---
 if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_width=True):
@@ -155,11 +156,11 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cached = None
-    if not force_refresh:
-        cursor.execute("SELECT title, ai_message, url FROM space_logs WHERE date = ?", (str(selected_date),))
-        cached = cursor.fetchone()
+    # [수정됨] 관리자 모드가 없어졌으므로, 무조건 DB부터 조회합니다.
+    cursor.execute("SELECT title, ai_message, url FROM space_logs WHERE date = ?", (str(selected_date),))
+    cached = cursor.fetchone()
     
+    # 변수 초기화
     title, explanation, url, hdurl, copyright = "", "", "", "", "NASA Public Domain"
 
     if cached:
@@ -180,7 +181,7 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
                     hdurl = res.get('hdurl', url)
                     copyright = res.get('copyright', 'NASA / Public Domain')
                     
-                    # [프롬프트 강화] 해시태그 절대 금지 명령 추가
+                    # [프롬프트] 해시태그 금지 및 사서 페르소나
                     prompt = f"""
                     당신은 '우주도서관'의 수석 사서입니다. 
                     사용자가 요청한 날짜의 천체 사진 정보를 브리핑해야 합니다.
@@ -247,7 +248,7 @@ st.markdown("""
     <p>
         <strong>Space Library Project</strong><br>
         Chief Librarian: <strong>Si eon Kim</strong> | Est. 2026<br>
-        <strong>ksu4718@gmail.com/strong>
+        <strong>ksu4718@gmail.com</strong>
     </p>
     <p style="font-size: 0.7rem; color: #555;">
         This archive utilizes data provided by NASA's APOD API.<br>
