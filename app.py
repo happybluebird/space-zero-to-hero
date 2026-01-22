@@ -50,88 +50,97 @@ if 'scheduler_started' not in st.session_state:
     thread.start()
     st.session_state['scheduler_started'] = True
 
-# --- [4. UI 디자인] ---
-# 1. 페이지 설정 (이게 가장 먼저 나와야 합니다!)
-st.set_page_config(page_title="우주 기지: Zero to Hero", page_icon="🚀", layout="wide")
+# --- [4. UI 디자인: Space Library Theme] ---
+# 1. 페이지 설정
+st.set_page_config(page_title="우주도서관: Deep Space Archive", page_icon="🏛️", layout="wide")
 
-# 2. 유성우 테마 디자인 적용 (CSS)
+# 2. 도서관 테마 디자인 적용 (CSS)
 st.markdown("""
 <style>
-    /* 배경 및 전체 폰트 설정 */
+    /* 1. 배경 및 전체 폰트 설정 (Deep Space & Antique) */
     .stApp {
-        /* NASA의 멋진 성운 사진 (임시 대체용) */
-background-image: linear-gradient(rgba(0, 8, 20, 0.8), rgba(0, 8, 20, 0.8)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
+        /* 배경: 어두운 우주 이미지 */
+        background-image: linear-gradient(rgba(5, 10, 20, 0.9), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
         background-size: cover;
         background-attachment: fixed;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        color: #E0E0E0;
+        color: #e0e0e0; /* 오래된 종이 느낌의 미색 텍스트 */
+        font-family: "Times New Roman", Times, serif; /* 지적인 명조체 계열 */
     }
     
-    /* 제목 스타일 */
+    /* 2. 제목 스타일 (우주도서관 간판) */
     h1 {
-        color: #FFFFFF;
+        font-family: 'Times New Roman', serif;
+        color: #d4af37; /* 앤틱 골드 (금박 느낌) */
         text-align: center;
-        font-weight: 800;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        letter-spacing: 2px;
+        margin-bottom: 10px;
     }
     
-    /* 사이드바 스타일 */
+    /* 3. 사이드바 스타일 (서재 느낌) */
     [data-testid="stSidebar"] {
-        background-color: rgba(10, 25, 48, 0.9);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: #0b1016; /* 아주 짙은 네이비/블랙 */
+        border-right: 1px solid #2c3e50;
+    }
+    [data-testid="stSidebar"] h1 {
+        font-size: 1.5rem !important;
+        color: #a8b2c1;
+        text-align: left;
     }
 
-    /* 버튼 스타일 (로켓 발사) */
+    /* 4. 버튼 스타일 (기록 열람) */
     div.stButton > button {
-        background: linear-gradient(135deg, #FF4500, #FFD700);
-        color: #000814;
-        border: none;
-        border-radius: 980px;
+        background-color: #1c2833; /* 차분한 딥 네이비 */
+        color: #d4af37; /* 금색 글씨 */
+        border: 1px solid #d4af37; /* 금색 테두리 */
+        border-radius: 5px; /* 둥글지 않고 각진 단말기 느낌 */
         padding: 15px 30px;
-        font-size: 1.2rem;
-        font-weight: 800;
-        box-shadow: 0 4px 15px rgba(255, 69, 0, 0.4);
+        font-size: 1.1rem;
+        font-family: sans-serif; /* 가독성 위해 버튼은 고딕 */
+        transition: all 0.3s ease;
         width: 100%;
     }
     div.stButton > button:hover {
-        transform: translateY(-3px);
-        filter: brightness(1.1);
-    }
-    div.stButton > button::before {
-        content: "🚀 ";
-        margin-right: 8px;
+        background-color: #d4af37;
+        color: #0b1016;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
     }
 
-    /* 메시지 박스 스타일 */
+    /* 5. 리포트 박스 스타일 (문서 느낌) */
     div[data-testid="stAlert"] {
-        background-color: rgba(10, 25, 48, 0.6);
-        border-left: 5px solid #FFD700;
-        border-radius: 18px;
-        backdrop-filter: blur(10px);
-        color: #E0E0E0;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-left: 3px solid #d4af37;
+        color: #f0f0f0;
+    }
+    
+    /* 6. 이미지 캡션 */
+    div[data-testid="stImage"] > div {
+        border: 1px solid #333;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 화면 구성 요소 (날짜 선택기 등)
-st.title("🌌 우주 기지 컨트롤 센터")
+# 3. 화면 구성
+st.title("🏛️ 우주도서관 (Space Library)")
+st.markdown("<div style='text-align: center; color: #aaa; margin-bottom: 30px;'>세상에서 가장 큰 서재, 우주도서관에 오신 것을 환영합니다.</div>", unsafe_allow_html=True)
 
-st.sidebar.title("📅 날짜 설정")
-st.sidebar.info("👇 아래 달력 아이콘을 눌러보세요")
+st.sidebar.title("🗂️ 아카이브 접근")
+st.sidebar.info("열람하고자 하는 과거의 날짜를 선택하십시오.")
 
-# 날짜 선택 기능 (이게 있어야 작동합니다!)
 selected_date = st.sidebar.date_input(
-    "날짜를 선택하세요", 
+    "열람 희망 날짜 (Access Date)", 
     date.today()
 )
 
-st.sidebar.write(f"선택된 날짜: **{selected_date}**")
+st.sidebar.write(f"선택된 좌표: **{selected_date}**")
 st.sidebar.markdown("---")
-st.sidebar.header("🎨 에디터 모드")
-force_refresh = st.sidebar.checkbox("🔄 저장된 문구 무시하고 다시 쓰기")
+st.sidebar.header("⚙️ 관리자 모드")
+force_refresh = st.sidebar.checkbox("🔄 데이터 재수신 (Cache Clear)")
 
-# --- [5. 메인 로직] ---
-if st.button('🚀 우주 기지와 통신 시작 (Click Me)', use_container_width=True, type="primary"):
+# --- [5. 메인 로직: 사서 브리핑] ---
+if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_width=True):
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -142,51 +151,65 @@ if st.button('🚀 우주 기지와 통신 시작 (Click Me)', use_container_wid
         cached = cursor.fetchone()
     
     if cached:
-        st.success("📦 [DB] 창고에서 데이터를 꺼내왔습니다!")
+        st.success("✅ [ARCHIVE] 보관소에서 기록을 찾았습니다.")
         title, ai_message, url = cached
     else:
-        with st.spinner('🛰️ NASA와 통신 중...'):
+        with st.spinner('📡 심우주 통신망 접속 중...'):
             try:
                 nasa_url = f'https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}'
-                
-                # [수정된 부분] 응답을 먼저 받고 상태를 확인합니다.
                 response = requests.get(nasa_url)
                 res = response.json()
                 
-                # 정상적으로 이미지 URL이 있는 경우
                 if 'url' in res:
                     title = res.get('title', '무제')
                     explanation = res.get('explanation', '')
                     url = res.get('url')
                     
+                    # [프롬프트 수정] 도서관 사서 페르소나 적용
                     prompt = f"""
-                    너는 마케터야. 
-                    [사진 설명]: {explanation}
-                    이걸 보고 20대에게 'Zero to Hero'의 영감을 주는 인스타 글을 써줘.
+                    당신은 '우주도서관'의 수석 사서입니다. 
+                    사용자가 요청한 날짜의 천체 사진 정보를 브리핑해야 합니다.
+                    
+                    [사진 데이터]: {explanation}
+                    
+                    위 내용을 바탕으로 아래 3가지 형식에 맞춰 정중하고 지적인 어조(경어체, ~습니다)로 리포트를 작성해 주세요.
+                    불필요한 이모지나 해시태그는 절대 사용하지 마십시오.
+                    
+                    1. [헤드라인 뉴스]: 내용을 관통하는 한 문장의 강렬한 제목
+                    2. [지식의 서사]: 사진에 담긴 천문학적 현상과 의미를 깊이 있게 설명하는 에세이 (3~4문장)
+                    3. [데이터 로그]: 관측 대상, 추정 거리, 별자리 위치 등 핵심 과학적 사실 요약 (글머리 기호 사용)
                     """
+                    
                     ai_message = model.generate_content(prompt).text
                     
                     cursor.execute("INSERT OR REPLACE INTO space_logs (date, title, explanation, ai_message, url) VALUES (?, ?, ?, ?, ?)",
                                    (str(selected_date), title, explanation, ai_message, url))
                     conn.commit()
                     
-                # [여기가 핵심] 데이터가 없을 때 진짜 이유를 화면에 보여줍니다.
                 else:
-                    st.error(f"🚨 NASA 통신 에러! 상태 코드: {response.status_code}")
-                    st.write("▼ 아래 메시지를 복사해서 알려주세요:")
-                    st.code(res) # 에러 내용을 그대로 보여줌
+                    st.error(f"🚨 통신 실패 (Status: {response.status_code})")
+                    st.code(res)
                     st.stop()
 
             except Exception as e:
-                st.error(f"시스템 오류 발생: {e}")
+                st.error(f"⚠️ 시스템 오류: {e}")
                 st.stop()
     
     conn.close()
 
     st.divider()
-    col1, col2 = st.columns([1, 1])
+    
+    # [레이아웃 변경] 왼쪽: 이미지 / 오른쪽: 리포트
+    col1, col2 = st.columns([1.2, 1])
+    
     with col1:
-        st.image(url, caption=title, use_container_width=True)
+        st.image(url, caption=f"Figure 1. {title}", use_container_width=True)
+        
     with col2:
-        st.info("💌 AI의 메시지")
+        st.info("📜 사서의 브리핑 리포트")
         st.write(ai_message)
+        
+        st.markdown("---")
+        st.caption("이 기록을 스크랩하시겠습니까?")
+        # [신규 기능] 리포트 내용 복사하기 (st.code를 쓰면 우측 상단에 복사 버튼이 생깁니다)
+        st.code(ai_message, language="text")
