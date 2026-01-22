@@ -51,7 +51,7 @@ if 'scheduler_started' not in st.session_state:
     st.session_state['scheduler_started'] = True
 
 # --- [4. UI 디자인: Space Library Theme] ---
-st.set_page_config(page_title="우주도서관: Deep Space Archive", page_icon="🏛️", layout="wide")
+st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
 st.markdown("""
 <style>
