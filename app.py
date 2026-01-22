@@ -118,9 +118,9 @@ st.markdown("""
         color: #aaa;
     }
 
-    /* 7. Footer 스타일 (새로 추가됨) */
+    /* 7. Footer 스타일 */
     .footer {
-        margin-top: 80px; /* 본문과 거리두기 */
+        margin-top: 80px;
         padding-top: 20px;
         padding-bottom: 20px;
         border-top: 1px solid #333;
@@ -128,13 +128,6 @@ st.markdown("""
         font-family: sans-serif;
         font-size: 0.8rem;
         color: #666;
-    }
-    .footer a {
-        color: #888;
-        text-decoration: none;
-    }
-    .footer a:hover {
-        color: #d4af37;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -167,7 +160,6 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
         cursor.execute("SELECT title, ai_message, url FROM space_logs WHERE date = ?", (str(selected_date),))
         cached = cursor.fetchone()
     
-    # 변수 초기화
     title, explanation, url, hdurl, copyright = "", "", "", "", "NASA Public Domain"
 
     if cached:
@@ -188,6 +180,7 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
                     hdurl = res.get('hdurl', url)
                     copyright = res.get('copyright', 'NASA / Public Domain')
                     
+                    # [프롬프트 강화] 해시태그 절대 금지 명령 추가
                     prompt = f"""
                     당신은 '우주도서관'의 수석 사서입니다. 
                     사용자가 요청한 날짜의 천체 사진 정보를 브리핑해야 합니다.
@@ -195,11 +188,14 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
                     [사진 데이터]: {explanation}
                     
                     위 내용을 바탕으로 아래 3가지 형식에 맞춰 정중하고 지적인 어조로 리포트를 작성해 주세요.
-                    내용이 너무 짧지 않게, 독자가 충분히 정보를 얻을 수 있도록 상세하게(단락 당 3문장 이상) 서술해 주세요.
                     
                     1. [헤드라인 뉴스]: 내용을 관통하는 한 문장의 강렬한 제목
                     2. [지식의 서사]: 사진에 담긴 천문학적 현상과 의미를 깊이 있게 설명하는 에세이 (풍부한 분량)
                     3. [데이터 로그]: 관측 대상, 추정 거리, 별자리 위치 등 핵심 과학적 사실 요약 (글머리 기호 사용)
+
+                    [주의사항]
+                    - 마지막에 해시태그(#)를 절대 붙이지 마십시오. (예: #우주 #NASA 금지)
+                    - 불필요한 이모지 사용을 자제하고, 문장 끝은 명확하게 맺으십시오.
                     """
                     
                     ai_message = model.generate_content(prompt).text
@@ -245,14 +241,13 @@ if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_
         st.info(f"📜 사서의 브리핑 리포트 ({selected_date})")
         st.write(ai_message)
 
-# --- [6. Footer: 하단 정보 영역] ---
-# 내용을 비우거나 고치고 싶으면 아래 텍스트를 수정하세요.
+# --- [6. Footer] ---
 st.markdown("""
 <div class="footer">
     <p>
         <strong>Space Library Project</strong><br>
-        Chief Librarian: <strong>Sieon Kim</strong> | Est. 2026 <br>
-        <strong>Space ksu4718@gmail.com</strong>
+        Chief Librarian: <strong>Si eon Kim</strong> | Est. 2026<br>
+        <strong>ksu4718@gmail.com/strong>
     </p>
     <p style="font-size: 0.7rem; color: #555;">
         This archive utilizes data provided by NASA's APOD API.<br>
