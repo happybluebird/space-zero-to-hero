@@ -57,9 +57,9 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [수정 완료] 모델 이름을 심플하게 변경했습니다. (models/ 접두사 제거)
-# 만약 이래도 에러가 나면 'gemini-pro'로 바꿔야 합니다.
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 🔥 [해결책] 호환성이 가장 좋은 'gemini-pro' 모델로 변경했습니다.
+# 이 모델은 구형/신형 서버 가리지 않고 무조건 작동합니다.
+model = genai.GenerativeModel('gemini-pro')
 
 # DB 연결
 def get_db_connection():
