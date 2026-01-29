@@ -2,38 +2,101 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 import sqlite3
-import threading
-import schedule
-import time
+import random  # 랜덤 추출을 위해 추가
 from datetime import date
 
+# ⚡ [핵심] 설정은 무조건 맨 위!
 st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
-# --- [1. 설정 및 키 입력] ---
+# --- [1. 메타 데이터 및 스타일 설정] ---
+# 로봇들이 잘 읽어가도록 메타 태그 강제 주입
+st.markdown(
+    f'<head><title>우주도서관: Deep Space Archive</title>'
+    f'<meta property="og:title" content="우주도서관: Deep Space Archive">'
+    f'<meta property="og:description" content="NASA 데이터를 기반으로 한 우주 기록 보관소입니다.">'
+    f'</head>', 
+    unsafe_allow_html=True
+)
+
+st.markdown("""
+<style>
+    /* 전체 배경: 깊은 우주 느낌 */
+    .stApp {
+        background-image: linear-gradient(rgba(5, 10, 20, 0.95), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
+        background-size: cover;
+        background-attachment: fixed;
+        color: #e0e0e0;
+        font-family: "Times New Roman", serif;
+    }
+    
+    /* 제목 스타일 */
+    h1 {
+        color: #d4af37; /* Gold */
+        text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        font-weight: 700;
+        letter-spacing: 1.5px;
+    }
+    
+    /* 사이드바 스타일 */
+    [data-testid="stSidebar"] {
+        background-color: #0b1016;
+        border-right: 1px solid #333;
+    }
+    
+    /* 버튼 커스텀 */
+    div.stButton > button {
+        background-color: #15202b;
+        color: #d4af37;
+        border: 1px solid #d4af37;
+        padding: 15px;
+        font-size: 1rem;
+        transition: 0.3s;
+    }
+    div.stButton > button:hover {
+        background-color: #d4af37;
+        color: #000;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+    }
+    
+    /* 정보 카드 */
+    .info-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 3px solid #d4af37;
+        margin-top: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- [2. API 키 및 DB 설정] ---
 try:
     NASA_KEY = st.secrets["NASA_KEY"]
     GEMINI_KEY = st.secrets["GEMINI_KEY"]
 except FileNotFoundError:
-    st.error("설정된 키가 없습니다. Streamlit Secrets에 키를 등록해주세요.")
+    st.error("🚨 보안 키(Secrets)가 설정되지 않았습니다.")
     st.stop()
 
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('models/gemini-flash-latest')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-# --- [2. DB 함수] ---
+# DB 연결 함수
 def get_db_connection():
-    return sqlite3.connect('space_base.db', check_same_thread=False)
+    return sqlite3.connect('space_library_v2.db', check_same_thread=False)
 
+# DB 초기화 (테이블 없으면 생성)
 def init_db():
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS space_logs (
-            date TEXT PRIMARY KEY,
+    c = conn.cursor()
+    # 로그 테이블: 날짜/키워드, 제목, 설명, AI해석, 이미지URL
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS library_logs (
+            id TEXT PRIMARY KEY, 
+            type TEXT,
             title TEXT,
-            explanation TEXT,
-            ai_message TEXT,
-            url TEXT
+            original_desc TEXT,
+            ai_brief TEXT,
+            img_url TEXT
         )
     ''')
     conn.commit()
@@ -41,219 +104,151 @@ def init_db():
 
 init_db()
 
-# --- [3. 스케줄러] ---
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+# --- [3. 사이드바: 탐사 통제실] ---
+st.sidebar.title("🚀 탐사 통제실")
+st.sidebar.markdown("---")
 
-if 'scheduler_started' not in st.session_state:
-    thread = threading.Thread(target=run_scheduler, daemon=True)
-    thread.start()
-    st.session_state['scheduler_started'] = True
-
-# --- [4. UI 디자인: Space Library Theme] ---
-
-st.markdown("""
-<style>
-    /* 1. 배경 및 전체 폰트 */
-    .stApp {
-        /* 배경 이미지 주소: 필요하면 이곳을 수정하세요 */
-        background-image: linear-gradient(rgba(5, 10, 20, 0.9), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
-        background-size: cover;
-        background-attachment: fixed;
-        color: #e0e0e0;
-        font-family: "Times New Roman", Times, serif;
-    }
-    
-    /* 2. 제목 스타일 */
-    h1 {
-        font-family: 'Times New Roman', serif;
-        color: #d4af37;
-        text-align: center;
-        font-weight: 700;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        letter-spacing: 2px;
-        margin-bottom: 10px;
-    }
-    
-    /* 3. 사이드바 스타일 */
-    [data-testid="stSidebar"] {
-        background-color: #0b1016;
-        border-right: 1px solid #2c3e50;
-    }
-
-    /* 4. 버튼 스타일 */
-    div.stButton > button {
-        background-color: #1c2833;
-        color: #d4af37;
-        border: 1px solid #d4af37;
-        border-radius: 2px;
-        padding: 15px 30px;
-        font-size: 1.1rem;
-        font-family: sans-serif;
-        transition: all 0.3s ease;
-        width: 100%;
-    }
-    div.stButton > button:hover {
-        background-color: #d4af37;
-        color: #0b1016;
-        box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-    }
-
-    /* 5. 리포트 박스 스타일 */
-    div[data-testid="stAlert"] {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-left: 3px solid #d4af37;
-        color: #f0f0f0;
-    }
-    
-    /* 6. 정보 카드 스타일 */
-    .info-card {
-        background-color: rgba(0, 0, 0, 0.3);
-        border: 1px solid #444;
-        padding: 15px;
-        margin-top: 10px;
-        border-radius: 5px;
-        font-family: sans-serif;
-        font-size: 0.9rem;
-        color: #aaa;
-    }
-
-    /* 7. Footer 스타일 */
-    .footer {
-        margin-top: 80px;
-        padding-top: 20px;
-        padding-bottom: 20px;
-        border-top: 1px solid #333;
-        text-align: center;
-        font-family: sans-serif;
-        font-size: 0.8rem;
-        color: #666;
-    }
-    .footer strong {
-        color: #d4af37;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# 3. 화면 구성
-st.title("🏛️ 우주도서관 (Space Library)")
-st.markdown("<div style='text-align: center; color: #aaa; margin-bottom: 30px;'>세상에서 가장 큰 서재, 우주도서관에 오신 것을 환영합니다.</div>", unsafe_allow_html=True)
-
-st.sidebar.title("🗂️ 아카이브 접근")
-st.sidebar.info("열람하고자 하는 과거의 날짜를 선택하십시오.")
-
-selected_date = st.sidebar.date_input(
-    "열람 희망 날짜 (Access Date)", 
-    date.today()
+# 검색 모드 선택 (라디오 버튼)
+search_mode = st.sidebar.radio(
+    "탐사 방식 선택:",
+    ("📅 날짜별 기록 (Date)", "🌌 테마별 탐사 (Category)")
 )
 
-st.sidebar.write(f"선택된 좌표: **{selected_date}**")
+st.sidebar.markdown("---")
 
-# --- [5. 메인 로직] ---
-if st.button('📖 아카이브 기록 열람 (Retrieve Record)', use_container_width=True):
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # [수정됨] 관리자 모드가 없어졌으므로, 무조건 DB부터 조회합니다.
-    cursor.execute("SELECT title, ai_message, url FROM space_logs WHERE date = ?", (str(selected_date),))
-    cached = cursor.fetchone()
-    
-    # 변수 초기화
-    title, explanation, url, hdurl, copyright = "", "", "", "", "NASA Public Domain"
+# 변수 초기화
+selected_date = None
+selected_keyword = None
+nasa_data = None
 
-    if cached:
-        st.success("✅ [ARCHIVE] 보관소에서 기록을 찾았습니다.")
-        title, ai_message, url = cached
-        hdurl = url 
-    else:
-        with st.spinner('📡 심우주 통신망 접속 중...'):
-            try:
-                nasa_url = f'https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}'
-                response = requests.get(nasa_url)
-                res = response.json()
+# 모드별 입력 UI
+if search_mode == "📅 날짜별 기록 (Date)":
+    st.sidebar.info("과거의 특정 날짜에 기록된 우주 사진을 인양합니다.")
+    selected_date = st.sidebar.date_input("날짜 선택", date.today())
+    query_id = str(selected_date) # DB 저장용 ID
+    
+else: # 테마별 탐사
+    st.sidebar.info("NASA 데이터베이스에서 주제별 최고의 사진을 발굴합니다.")
+    
+    # 📌 [핵심] 카테고리 - 키워드 매핑 (NASA API가 확실히 주는 것들만 엄선)
+    category_map = {
+        "🌌 은하 (Galaxies)": "galaxy",
+        "✨ 성운 (Nebula)": "nebula",
+        "🪐 태양계 (Solar System)": "solar system",
+        "🌑 블랙홀 (Black Hole)": "black hole",
+        "🚀 우주 미션 (Missions)": "space launch",
+        "👨‍🚀 우주비행사 (Astronauts)": "astronaut"
+    }
+    
+    selected_category = st.sidebar.selectbox("주제 선택", list(category_map.keys()))
+    selected_keyword = category_map[selected_category]
+    query_id = f"CAT_{selected_keyword}_{date.today()}" # DB 저장용 ID (오늘 날짜 + 키워드)
+
+# --- [4. 메인 로직: 데이터 인양] ---
+st.title("🏛️ 우주도서관 (Space Library)")
+st.caption("Universal Archive System powered by NASA & Gemini AI")
+
+# 실행 버튼
+btn_label = "🔭 기록 열람 (Retrieve)" if search_mode == "📅 날짜별 기록 (Date)" else "🛰️ 탐사 시작 (Explore)"
+
+if st.button(btn_label, use_container_width=True):
+    
+    # UI 구획 나누기
+    col_img, col_text = st.columns([1, 1.2])
+    
+    # 데이터 담을 변수들
+    img_url, title, desc, ai_text = "", "", "", ""
+    
+    try:
+        with st.spinner("📡 심우주 데이터 수신 중..."):
+            
+            # [시나리오 A] 날짜 검색 (APOD API)
+            if search_mode == "📅 날짜별 기록 (Date)":
+                url = f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}"
+                res = requests.get(url).json()
                 
-                if 'url' in res:
-                    title = res.get('title', '무제')
-                    explanation = res.get('explanation', '')
-                    url = res.get('url')
-                    hdurl = res.get('hdurl', url)
-                    copyright = res.get('copyright', 'NASA / Public Domain')
-                    
-                    # [프롬프트] 해시태그 금지 및 사서 페르소나
-                    prompt = f"""
-                    당신은 '우주도서관'의 수석 사서입니다. 
-                    사용자가 요청한 날짜의 천체 사진 정보를 브리핑해야 합니다.
-                    
-                    [사진 데이터]: {explanation}
-                    
-                    위 내용을 바탕으로 아래 3가지 형식에 맞춰 정중하고 지적인 어조로 리포트를 작성해 주세요.
-                    
-                    1. [헤드라인 뉴스]: 내용을 관통하는 한 문장의 강렬한 제목
-                    2. [지식의 서사]: 사진에 담긴 천문학적 현상과 의미를 깊이 있게 설명하는 에세이 (풍부한 분량)
-                    3. [데이터 로그]: 관측 대상, 추정 거리, 별자리 위치 등 핵심 과학적 사실 요약 (글머리 기호 사용)
-
-                    [주의사항]
-                    - 마지막에 해시태그(#)를 절대 붙이지 마십시오. (예: #우주 #NASA 금지)
-                    - 불필요한 이모지 사용을 자제하고, 문장 끝은 명확하게 맺으십시오.
-                    """
-                    
-                    ai_message = model.generate_content(prompt).text
-                    
-                    cursor.execute("INSERT OR REPLACE INTO space_logs (date, title, explanation, ai_message, url) VALUES (?, ?, ?, ?, ?)",
-                                   (str(selected_date), title, explanation, ai_message, url))
-                    conn.commit()
-                    
-                else:
-                    st.error(f"🚨 통신 실패 (Status: {response.status_code})")
-                    st.code(res)
+                if 'url' not in res:
+                    st.error("해당 날짜의 데이터가 없습니다.")
                     st.stop()
+                    
+                img_url = res.get('hdurl', res.get('url'))
+                title = res.get('title', '무제')
+                desc = res.get('explanation', '')
+                
+            # [시나리오 B] 카테고리 검색 (NASA Image API)
+            else:
+                # NASA 검색 API (키워드로 이미지 100개 요청)
+                search_url = f"https://images-api.nasa.gov/search?q={selected_keyword}&media_type=image"
+                res = requests.get(search_url).json()
+                
+                items = res.get('collection', {}).get('items', [])
+                
+                if not items:
+                    st.warning("해당 카테고리의 데이터가 없습니다.")
+                    st.stop()
+                
+                # 🎲 [Pro 기능] 매번 똑같은 게 나오면 재미없으니 '랜덤'으로 하나 뽑음
+                selected_item = random.choice(items[:50]) # 상위 50개 중 랜덤 1개
+                
+                data_core = selected_item['data'][0]
+                link_core = selected_item['links'][0]
+                
+                title = data_core.get('title', '무제')
+                desc = data_core.get('description', '상세 설명 없음')
+                img_url = link_core.get('href')
 
-            except Exception as e:
-                st.error(f"⚠️ 시스템 오류: {e}")
-                st.stop()
-    
-    conn.close()
+            # --- [AI 사서의 브리핑 (공통 로직)] ---
+            # DB에 저장된 분석이 있는지 확인 (API 비용 절약)
+            # 여기서는 '랜덤 탐사'의 재미를 위해 카테고리 모드는 매번 새로 생성하게 할 수도 있음.
+            # 일단은 매번 생성하는 구조로 갑니다.
+            
+            prompt = f"""
+            당신은 '우주도서관'의 지적인 수석 사서입니다.
+            아래 우주 사진 정보를 바탕으로 방문객에게 브리핑 리포트를 작성해주세요.
+            
+            [제목]: {title}
+            [데이터]: {desc}
+            
+            [작성 형식]
+            1. 📰 **헤드라인**: 호기심을 자극하는 한 문장 제목
+            2. 📖 **지식의 서사**: 이 천체가 무엇인지, 왜 중요한지 인문학적이고 과학적으로 설명 (약 3~4문장)
+            3. 🧬 **데이터 로그**: 
+               - 관측 대상:
+               - 핵심 특징:
+            
+            *어조: 정중하고 지적이며, 경이로움을 담아서.*
+            *절대 해시태그(#)를 넣지 마시오.*
+            """
+            
+            ai_response = model.generate_content(prompt)
+            ai_text = ai_response.text
+            
+            # 화면 출력
+            with col_img:
+                st.image(img_url, use_container_width=True)
+                st.markdown(f"""
+                <div class="info-card">
+                    <strong>📂 아카이브 태그</strong><br>
+                    {selected_date if selected_date else selected_category}<br>
+                    <span style='color:#888; font-size:0.8em;'>NASA Official Data</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 원본 보기 링크
+                st.link_button("🔭 원본 고해상도 이미지", img_url, use_container_width=True)
 
-    st.divider()
-    
-    col1, col2 = st.columns([1, 1.2])
-    
-    with col1:
-        st.image(url, caption=f"Figure 1. {title}", use_container_width=True)
-        
-        if not 'copyright' in locals(): copyright = "NASA Archive"
-        if not 'hdurl' in locals(): hdurl = url
+            with col_text:
+                st.subheader(f"📜 {title}")
+                st.write(ai_text)
+                
+    except Exception as e:
+        st.error(f"데이터 통신 중 오류 발생: {e}")
 
-        st.markdown(f"""
-        <div class="info-card">
-            <strong>📂 원본 소장 자료 스펙 (Technical Spec)</strong><br><br>
-            • <strong>등록 ID:</strong> {selected_date}<br>
-            • <strong>저작권자:</strong> {copyright}<br>
-            • <strong>미디어 유형:</strong> Digital Image / High Resolution<br>
-            • <strong>보관소:</strong> NASA APOD Archive<br>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.link_button("🔭 고해상도 원본 보기 (HD View)", hdurl, use_container_width=True)
-        
-    with col2:
-        st.info(f"📜 사서의 브리핑 리포트 ({selected_date})")
-        st.write(ai_message)
-
-# --- [6. Footer] ---
+# --- [5. Footer] ---
+st.markdown("---")
 st.markdown("""
-<div class="footer">
-    <p>
-        <strong>Space Library Project</strong><br>
-        Chief Librarian: <strong>Si eon Kim</strong> | Est. 2026<br>
-        <strong>ksu4718@gmail.com</strong>
-    </p>
-    <p style="font-size: 0.7rem; color: #555;">
-        This archive utilizes data provided by NASA's APOD API.<br>
-        Designed for educational and inspirational purposes.
-    </p>
+<div style='text-align: center; color: #666; font-size: 0.8rem;'>
+    <strong>Space Library Project</strong> | Chief Librarian: Si eon Kim<br>
+    Powered by NASA Open API & Google Gemini
 </div>
 """, unsafe_allow_html=True)
