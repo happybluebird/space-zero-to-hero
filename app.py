@@ -59,7 +59,8 @@ genai.configure(api_key=GEMINI_KEY)
 
 # 🔥 [해결책] 호환성이 가장 좋은 'gemini-pro' 모델로 변경했습니다.
 # 이 모델은 구형/신형 서버 가리지 않고 무조건 작동합니다.
-model = genai.GenerativeModel('gemini-pro')
+# 번역기를 업그레이드했으니 이제 Flash 모델을 완벽하게 지원합니다.
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # DB 연결
 def get_db_connection():
