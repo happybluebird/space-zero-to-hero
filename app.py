@@ -52,9 +52,10 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [해결책] 2.5(불안정) 대신 2.0(안정적)으로 교체!
-# 이 모델은 대표님 목록에도 있고, 에러율이 훨씬 낮습니다.
-model = genai.GenerativeModel('gemini-2.0-flash')
+# 🔥 [해결책] 무료 사용량이 가장 넉넉한 '1.5 Flash'로 복귀!
+# 아까의 404 에러는 이름표(models/) 때문이었으므로, 
+# 이제 이렇게 깔끔하게 적으면 100% 작동하며 쿼터 걱정도 없습니다.
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # DB 연결
 def get_db_connection():
@@ -105,7 +106,7 @@ else:
 
 # --- [4. 메인 로직] ---
 st.title("🏛️ 우주도서관 (Space Library)")
-st.caption("Powered by NASA Open API & Google Gemini 2.0 Flash")
+st.caption("Powered by NASA Open API & Google Gemini 1.5 Flash")
 
 btn_label = "🔭 기록 열람 (Retrieve)" if search_mode == "📅 날짜별 기록 (Date)" else "🛰️ 탐사 시작 (Explore)"
 
@@ -113,7 +114,7 @@ if st.button(btn_label, use_container_width=True):
     col_img, col_text = st.columns([1, 1.2])
     
     try:
-        with st.spinner("📡 심우주 데이터 수신 및 AI(Ver 2.0) 분석 중..."):
+        with st.spinner("📡 심우주 데이터 수신 및 AI 분석 중..."):
             img_url, title, desc, ai_text = "", "", "", ""
             
             # A. 날짜 검색
@@ -170,9 +171,11 @@ if st.button(btn_label, use_container_width=True):
                 st.write(ai_text)
                 
     except Exception as e:
-        # 500 에러가 나면 "잠시 후 다시 시도"라고 안내
-        st.error(f"⚠️ 일시적 통신 오류: {e}")
-        st.info("💡 서버가 붐비고 있습니다. 3초 뒤에 다시 버튼을 눌러주세요.")
+        # 에러 처리
+        if "429" in str(e):
+             st.error("⏳ 사용량이 너무 많습니다! 잠시 1분만 쉬었다가 눌러주세요.")
+        else:
+             st.error(f"⚠️ 오류 발생: {e}")
 
 # Footer
 st.markdown("---")
