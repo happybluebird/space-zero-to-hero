@@ -8,7 +8,7 @@ from datetime import date
 # ⚡ [1. 페이지 설정]
 st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
-# 로봇 메타 데이터 (카카오톡/SNS 미리보기용)
+# 로봇 메타 데이터
 st.markdown(
     f'<head><title>우주도서관: Deep Space Archive</title>'
     f'<meta property="og:title" content="우주도서관: Deep Space Archive">'
@@ -17,7 +17,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# UI 스타일링
 st.markdown("""
 <style>
     .stApp {
@@ -29,7 +28,6 @@ st.markdown("""
     }
     h1 { color: #d4af37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); font-weight: 700; }
     [data-testid="stSidebar"] { background-color: #0b1016; border-right: 1px solid #333; }
-    
     div.stButton > button {
         background-color: #15202b; color: #d4af37; border: 1px solid #d4af37;
         padding: 15px; font-size: 1rem; transition: 0.3s;
@@ -54,11 +52,11 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [핵심 수정] 진단 키트에서 확인된 'Gemini 2.5 Flash' 모델 탑재!
-# 가장 최신이면서 빠르고, 대표님 키로 확실하게 작동하는 모델입니다.
-model = genai.GenerativeModel('gemini-2.5-flash')
+# 🔥 [해결책] 2.5(불안정) 대신 2.0(안정적)으로 교체!
+# 이 모델은 대표님 목록에도 있고, 에러율이 훨씬 낮습니다.
+model = genai.GenerativeModel('gemini-2.0-flash')
 
-# DB 연결 및 초기화
+# DB 연결
 def get_db_connection():
     return sqlite3.connect('space_library_v2.db', check_same_thread=False)
 
@@ -107,7 +105,7 @@ else:
 
 # --- [4. 메인 로직] ---
 st.title("🏛️ 우주도서관 (Space Library)")
-st.caption(f"Powered by NASA Open API & Google Gemini 2.5 Flash") 
+st.caption("Powered by NASA Open API & Google Gemini 2.0 Flash")
 
 btn_label = "🔭 기록 열람 (Retrieve)" if search_mode == "📅 날짜별 기록 (Date)" else "🛰️ 탐사 시작 (Explore)"
 
@@ -115,10 +113,10 @@ if st.button(btn_label, use_container_width=True):
     col_img, col_text = st.columns([1, 1.2])
     
     try:
-        with st.spinner("📡 심우주 데이터 수신 및 AI(Ver 2.5) 분석 중..."):
+        with st.spinner("📡 심우주 데이터 수신 및 AI(Ver 2.0) 분석 중..."):
             img_url, title, desc, ai_text = "", "", "", ""
             
-            # A. 날짜 검색 (NASA APOD)
+            # A. 날짜 검색
             if search_mode == "📅 날짜별 기록 (Date)":
                 url = f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}"
                 res = requests.get(url).json()
@@ -129,7 +127,7 @@ if st.button(btn_label, use_container_width=True):
                 title = res.get('title', '무제')
                 desc = res.get('explanation', '')
                 
-            # B. 카테고리 검색 (NASA Image API)
+            # B. 카테고리 검색
             else:
                 search_url = f"https://images-api.nasa.gov/search?q={selected_keyword}&media_type=image"
                 res = requests.get(search_url).json()
@@ -146,7 +144,7 @@ if st.button(btn_label, use_container_width=True):
                 desc = data_core.get('description', '설명 없음')
                 img_url = link_core.get('href')
 
-            # AI 분석 (프롬프트 최적화)
+            # AI 분석
             prompt = f"""
             당신은 '우주도서관'의 수석 사서입니다.
             사진 정보: {title} / {desc}
@@ -172,7 +170,9 @@ if st.button(btn_label, use_container_width=True):
                 st.write(ai_text)
                 
     except Exception as e:
-        st.error(f"⚠️ 시스템 오류 발생: {e}")
+        # 500 에러가 나면 "잠시 후 다시 시도"라고 안내
+        st.error(f"⚠️ 일시적 통신 오류: {e}")
+        st.info("💡 서버가 붐비고 있습니다. 3초 뒤에 다시 버튼을 눌러주세요.")
 
 # Footer
 st.markdown("---")
