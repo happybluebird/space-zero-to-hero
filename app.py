@@ -7,6 +7,8 @@ import schedule
 import time
 from datetime import date
 
+st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
+
 # --- [1. 설정 및 키 입력] ---
 try:
     NASA_KEY = st.secrets["NASA_KEY"]
@@ -51,7 +53,6 @@ if 'scheduler_started' not in st.session_state:
     st.session_state['scheduler_started'] = True
 
 # --- [4. UI 디자인: Space Library Theme] ---
-st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
 st.markdown("""
 <style>
