@@ -3,16 +3,17 @@ import google.generativeai as genai
 import requests
 import sqlite3
 import random
+import time
 from datetime import date
 
-# ⚡ [1. 페이지 설정]
+# ⚡ [1. 페이지 및 스타일 설정]
 st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
 # 로봇 메타 데이터
 st.markdown(
     f'<head><title>우주도서관: Deep Space Archive</title>'
     f'<meta property="og:title" content="우주도서관: Deep Space Archive">'
-    f'<meta property="og:description" content="NASA 데이터를 기반으로 한 우주 기록 보관소입니다.">'
+    f'<meta property="og:description" content="NASA 데이터를 기반으로 한 전문 우주 기록 보관소입니다.">'
     f'</head>', 
     unsafe_allow_html=True
 )
@@ -20,25 +21,38 @@ st.markdown(
 st.markdown("""
 <style>
     .stApp {
-        background-image: linear-gradient(rgba(5, 10, 20, 0.95), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
+        background-image: linear-gradient(rgba(0, 0, 0, 0.9), rgba(10, 20, 40, 0.95)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
         background-size: cover;
         background-attachment: fixed;
         color: #e0e0e0;
-        font-family: "Times New Roman", serif;
+        font-family: "Helvetica Neue", Arial, sans-serif; /* 폰트를 좀 더 모던하게 변경 */
     }
     h1 { color: #d4af37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); font-weight: 700; }
-    [data-testid="stSidebar"] { background-color: #0b1016; border-right: 1px solid #333; }
+    [data-testid="stSidebar"] { background-color: #050505; border-right: 1px solid #222; }
+    
+    /* 버튼 스타일 (전문가 느낌의 청록색 포인트) */
     div.stButton > button {
-        background-color: #15202b; color: #d4af37; border: 1px solid #d4af37;
-        padding: 15px; font-size: 1rem; transition: 0.3s;
+        background-color: #0d1b2a; color: #00f2ff; border: 1px solid #00f2ff;
+        padding: 15px; font-size: 1rem; transition: 0.3s; font-family: 'Courier New', monospace;
     }
     div.stButton > button:hover {
-        background-color: #d4af37; color: #000; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        background-color: #00f2ff; color: #000; box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
     }
+    
+    /* 정보 카드 */
     .info-card {
-        background: rgba(255, 255, 255, 0.05); padding: 20px;
-        border-radius: 8px; border-left: 3px solid #d4af37; margin-top: 20px;
+        background: rgba(0, 20, 40, 0.6); padding: 20px;
+        border-radius: 4px; border-left: 3px solid #00f2ff; margin-top: 20px;
+        font-family: 'Courier New', monospace;
     }
+
+    /* 망원경 뱃지 스타일 */
+    .badge-hubble { background-color: #3A6EA5; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+    .badge-webb { background-color: #D4AF37; color: black; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+    .badge-chandra { background-color: #884EA0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+    .badge-spitzer { background-color: #E67E22; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+    .badge-generic { background-color: #555; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -52,36 +66,52 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [해결책] 진단 키트 목록에 있던 'gemini-flash-latest' 사용!
-# 1.5라는 숫자를 빼고, 서버가 인식하는 정확한 이름을 넣었습니다.
-# 이제 404(못 찾음) 에러는 절대 뜰 수 없습니다.
+# 🔥 [안정화된 모델] Gemini Flash Latest 사용
 model = genai.GenerativeModel('gemini-flash-latest')
 
-# DB 연결
-def get_db_connection():
-    return sqlite3.connect('space_library_v2.db', check_same_thread=False)
+# --- [3. 헬퍼 함수: 망원경 뱃지 감지기] ---
+def get_telescope_badges(text):
+    text_lower = text.lower()
+    badges = ""
+    if "hubble" in text_lower or "hst" in text_lower:
+        badges += '<span class="badge-hubble">🔭 Hubble Space Telescope</span>'
+    if "webb" in text_lower or "jwst" in text_lower:
+        badges += '<span class="badge-webb">🛰️ James Webb (JWST)</span>'
+    if "chandra" in text_lower:
+        badges += '<span class="badge-chandra">🟣 Chandra X-ray</span>'
+    if "spitzer" in text_lower:
+        badges += '<span class="badge-spitzer">🔴 Spitzer</span>'
+    
+    if badges == "":
+        badges = '<span class="badge-generic">📡 NASA Archive Data</span>'
+    return badges
 
-def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS library_logs (
-            id TEXT PRIMARY KEY, type TEXT, title TEXT, 
-            original_desc TEXT, ai_brief TEXT, img_url TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# --- [4. 사이드바: 전문가 대시보드] ---
+st.sidebar.title("🚀 MISSION CONTROL")
+st.sidebar.caption("Real-time Space Weather & Archive Access")
 
-init_db()
+# ☀ [기능 추가] 실시간 우주 날씨 (NASA SDO 위성 데이터)
+st.sidebar.markdown("### ☀ Solar Monitor (SDO/AIA)")
+try:
+    # NASA SDO의 실시간 태양 이미지 (가장 최신 이미지를 가져오는 URL)
+    # AIA 193 옹스트롬 (코로나와 플레어를 잘 보여줌)
+    sdo_url = "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0193.jpg"
+    # 캐싱 방지를 위해 타임스탬프 추가
+    st.sidebar.image(sdo_url, caption=f"Live Solar Feed (Updated: {date.today()})", use_container_width=True)
+    st.sidebar.info("📡 NASA SDO 위성이 전송하는 실시간 태양 활동입니다.")
+except:
+    st.sidebar.warning("Solar Feed Offline")
 
-# --- [3. 사이드바 UI] ---
-st.sidebar.title("🚀 탐사 통제실")
 st.sidebar.markdown("---")
 
+# 검색 모드
 search_mode = st.sidebar.radio(
-    "탐사 방식 선택:", ("📅 날짜별 기록 (Date)", "🌌 테마별 탐사 (Category)")
+    "데이터 인양 모드 (Retrieval Mode):", 
+    ("📅 날짜별 기록 (Date)", "🌌 심우주 아카이브 (Deep Field)")
 )
+
+# 🔬 [기능 추가] 전문가 모드 토글
+expert_mode = st.sidebar.toggle("🔬 전문가 분석 모드 (Expert Mode)", value=False)
 
 st.sidebar.markdown("---")
 
@@ -89,82 +119,114 @@ selected_date = None
 selected_keyword = None
 
 if search_mode == "📅 날짜별 기록 (Date)":
-    st.sidebar.info("과거의 특정 날짜를 지정하여 기록을 인양합니다.")
-    selected_date = st.sidebar.date_input("날짜 선택", date.today())
+    selected_date = st.sidebar.date_input("Target Date", date.today())
 else:
-    st.sidebar.info("주제별 최고의 사진을 발굴합니다.")
+    # 카테고리를 좀 더 전문적으로 변경
     category_map = {
         "🌌 은하 (Galaxies)": "galaxy",
-        "✨ 성운 (Nebula)": "nebula",
+        "✨ 성운 (Nebulae)": "nebula",
         "🪐 태양계 (Solar System)": "solar system",
         "🌑 블랙홀 (Black Hole)": "black hole",
-        "🚀 우주 미션 (Missions)": "space launch",
-        "👨‍🚀 우주비행사 (Astronauts)": "astronaut"
+        "🌟 초신성 잔해 (Supernova Remnant)": "supernova remnant",
+        "🔭 심우주 관측 (Deep Field)": "deep field",
+        "☄️ 혜성/소행성 (Comets/Asteroids)": "comet"
     }
-    selected_category = st.sidebar.selectbox("주제 선택", list(category_map.keys()))
+    selected_category = st.sidebar.selectbox("Target Object", list(category_map.keys()))
     selected_keyword = category_map[selected_category]
 
-# --- [4. 메인 로직] ---
+# --- [5. 메인 로직] ---
 st.title("🏛️ 우주도서관 (Space Library)")
-st.caption("Powered by NASA Open API & Google Gemini Flash")
+st.caption("Advanced Archive System powered by NASA Open API & Gemini Flash")
 
-btn_label = "🔭 기록 열람 (Retrieve)" if search_mode == "📅 날짜별 기록 (Date)" else "🛰️ 탐사 시작 (Explore)"
+btn_label = "🔭 데이터 분석 시작 (Initialize Analysis)"
 
 if st.button(btn_label, use_container_width=True):
-    col_img, col_text = st.columns([1, 1.2])
+    col_img, col_text = st.columns([1.5, 1.2]) # 이미지를 좀 더 크게
     
     try:
-        with st.spinner("📡 심우주 데이터 수신 및 AI 분석 중..."):
+        with st.spinner("📡 Deep Space Network(DSN) 연결 중... 데이터 수신 대기..."):
             img_url, title, desc, ai_text = "", "", "", ""
             
-            # A. 날짜 검색
+            # NASA API 호출 로직 (기존과 동일)
             if search_mode == "📅 날짜별 기록 (Date)":
                 url = f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&date={selected_date}"
                 res = requests.get(url).json()
                 if 'url' not in res:
-                    st.error("데이터 없음")
+                    st.error("해당 날짜의 관측 데이터가 존재하지 않습니다.")
                     st.stop()
                 img_url = res.get('hdurl', res.get('url'))
-                title = res.get('title', '무제')
+                title = res.get('title', 'Untitled Object')
                 desc = res.get('explanation', '')
                 
-            # B. 카테고리 검색
             else:
                 search_url = f"https://images-api.nasa.gov/search?q={selected_keyword}&media_type=image"
                 res = requests.get(search_url).json()
                 items = res.get('collection', {}).get('items', [])
                 if not items:
-                    st.warning("데이터 없음")
+                    st.warning("데이터베이스에서 일치하는 천체를 찾지 못했습니다.")
                     st.stop()
                 
                 selected_item = random.choice(items[:50])
                 data_core = selected_item['data'][0]
                 link_core = selected_item['links'][0]
                 
-                title = data_core.get('title', '무제')
-                desc = data_core.get('description', '설명 없음')
+                title = data_core.get('title', 'Untitled Object')
+                desc = data_core.get('description', 'No description available.')
                 img_url = link_core.get('href')
 
-            # AI 분석
-            prompt = f"""
-            당신은 '우주도서관'의 수석 사서입니다.
-            사진 정보: {title} / {desc}
-            
-            [작성 형식]
-            1. 📰 **헤드라인**: 호기심을 자극하는 제목 (한국어)
-            2. 📖 **지식의 서사**: 인문학적/과학적 해설 (3~4문장, 한국어)
-            3. 🧬 **데이터 로그**: 핵심 특징 요약
-            
-            *어조: 정중하고 지적으로. 해시태그 금지.*
-            """
+            # 🧬 [핵심] 프롬프트 분기 처리 (일반 모드 vs 전문가 모드)
+            if expert_mode:
+                # 전문가용 프롬프트: 감성 배제, 데이터 중심
+                prompt = f"""
+                당신은 NASA의 '수석 데이터 분석가'입니다. 
+                아래 우주 사진 정보를 바탕으로 천문학자 및 우주 애호가를 위한 '기술적 분석 리포트'를 작성하세요.
+                
+                [Target Object]: {title}
+                [Raw Data]: {desc}
+                
+                [Output Format] - 한국어로 작성
+                1. 🧪 **천체 분류 (Object Type)**: (예: 나선 은하, 행성상 성운 등)
+                2. 🔭 **관측 장비/미션 (Instrument)**: (예: Hubble WFC3, Chandra X-ray 등 - 텍스트에서 유추)
+                3. 📏 **물리적 데이터 (Physical Data)**:
+                   - 거리 (Distance): (추정치)
+                   - 위치 (Constellation): (별자리 추정)
+                   - 특징: (스펙트럼, 구성 물질 등 기술적 특징 요약)
+                4. 📝 **심층 분석 (Deep Analysis)**: 
+                   - 이 천체의 형성 과정이나 과학적 의의를 전문적인 용어를 사용하여 3문장 내외로 서술.
+                
+                *톤앤매너: 건조하고, 정확하며, 학술적인 어조 유지.*
+                """
+            else:
+                # 일반 모드 프롬프트: 기존의 정중한 사서
+                prompt = f"""
+                당신은 '우주도서관'의 수석 사서입니다.
+                사진 정보: {title} / {desc}
+                
+                [작성 형식]
+                1. 📰 **헤드라인**: 호기심을 자극하는 제목 (한국어)
+                2. 📖 **지식의 서사**: 인문학적/과학적 해설 (3~4문장, 한국어)
+                3. 🧬 **데이터 로그**: 핵심 특징 요약
+                
+                *어조: 정중하고 지적으로. 해시태그 금지.*
+                """
             
             ai_response = model.generate_content(prompt)
             ai_text = ai_response.text
             
+            # 뱃지 생성
+            badges_html = get_telescope_badges(desc + title)
+            
             with col_img:
                 st.image(img_url, use_container_width=True)
-                st.markdown(f'<div class="info-card"><strong>ARCHIVE TAG</strong><br>{selected_keyword if selected_keyword else selected_date}</div>', unsafe_allow_html=True)
-                st.link_button("🔭 원본 이미지", img_url, use_container_width=True)
+                # 뱃지 및 메타데이터 표시
+                st.markdown(f"""
+                <div style="margin-top: 10px; margin-bottom: 20px;">
+                    {badges_html}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f'<div class="info-card"><strong>📂 ARCHIVE ID</strong><br>{selected_keyword if selected_keyword else selected_date}<br><br><strong>📷 SOURCE</strong><br>NASA Image & Video Library</div>', unsafe_allow_html=True)
+                st.link_button("🔭 원본 고해상도(FITS/JPG) 확인", img_url, use_container_width=True)
             
             with col_text:
                 st.subheader(f"📜 {title}")
@@ -172,10 +234,10 @@ if st.button(btn_label, use_container_width=True):
                 
     except Exception as e:
         if "429" in str(e):
-             st.error("⏳ 사용량이 많아 잠시 쉬고 있습니다. 1분 뒤에 다시 눌러주세요!")
+             st.error("⏳ 쿼터 제한(Rate Limit). 잠시 대기 후 시도하십시오.")
         else:
-             st.error(f"⚠️ 오류 발생: {e}")
+             st.error(f"⚠️ SYSTEM ERROR: {e}")
 
 # Footer
 st.markdown("---")
-st.markdown("<div style='text-align:center; color:#666;'>Space Library Project | Chief Librarian: Si eon Kim</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; color:#666; font-family: Courier New;'>Space Library Project | Ver 3.0 Research Edition | Created by Si eon Kim</div>", unsafe_allow_html=True)
