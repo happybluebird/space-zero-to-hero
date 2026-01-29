@@ -3,17 +3,12 @@ import google.generativeai as genai
 import requests
 import sqlite3
 import random
-import streamlit as st
-import google.generativeai as genai
-
-# 이 코드를 넣으면 화면 맨 위에 현재 서버가 쓰는 버전이 뜹니다.
-st.warning(f"현재 서버의 도구 버전: {genai.__version__}")
 from datetime import date
 
-# ⚡ [1. 설정] set_page_config는 무조건 맨 위!
+# ⚡ [1. 설정]
 st.set_page_config(page_title="우주도서관: Deep Space Archive", layout="wide")
 
-# 로봇 메타 데이터 주입
+# 메타 데이터 (SNS 공유용)
 st.markdown(
     f'<head><title>우주도서관: Deep Space Archive</title>'
     f'<meta property="og:title" content="우주도서관: Deep Space Archive">'
@@ -24,7 +19,6 @@ st.markdown(
 
 st.markdown("""
 <style>
-    /* 전체 배경 및 폰트 */
     .stApp {
         background-image: linear-gradient(rgba(5, 10, 20, 0.95), rgba(5, 10, 20, 0.9)), url('https://cdn.pixabay.com/photo/2016/10/20/18/35/earth-1756274_1280.jpg');
         background-size: cover;
@@ -34,8 +28,6 @@ st.markdown("""
     }
     h1 { color: #d4af37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); font-weight: 700; }
     [data-testid="stSidebar"] { background-color: #0b1016; border-right: 1px solid #333; }
-    
-    /* 버튼 스타일 */
     div.stButton > button {
         background-color: #15202b; color: #d4af37; border: 1px solid #d4af37;
         padding: 15px; font-size: 1rem; transition: 0.3s;
@@ -43,8 +35,6 @@ st.markdown("""
     div.stButton > button:hover {
         background-color: #d4af37; color: #000; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
     }
-    
-    /* 정보 카드 */
     .info-card {
         background: rgba(255, 255, 255, 0.05); padding: 20px;
         border-radius: 8px; border-left: 3px solid #d4af37; margin-top: 20px;
@@ -62,9 +52,8 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [해결책] 호환성이 가장 좋은 'gemini-pro' 모델로 변경했습니다.
-# 이 모델은 구형/신형 서버 가리지 않고 무조건 작동합니다.
-# 번역기를 업그레이드했으니 이제 Flash 모델을 완벽하게 지원합니다.
+# 🔥 [핵심 수정] models/ 를 떼어내고 이름만 깔끔하게 적었습니다.
+# 이제 버전 0.8.6과 완벽하게 호환됩니다.
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # DB 연결
@@ -147,7 +136,6 @@ if st.button(btn_label, use_container_width=True):
                     st.warning("데이터 없음")
                     st.stop()
                 
-                # 랜덤 추출
                 selected_item = random.choice(items[:50])
                 data_core = selected_item['data'][0]
                 link_core = selected_item['links'][0]
@@ -172,7 +160,6 @@ if st.button(btn_label, use_container_width=True):
             ai_response = model.generate_content(prompt)
             ai_text = ai_response.text
             
-            # 출력
             with col_img:
                 st.image(img_url, use_container_width=True)
                 st.markdown(f'<div class="info-card"><strong>ARCHIVE TAG</strong><br>{selected_keyword if selected_keyword else selected_date}</div>', unsafe_allow_html=True)
