@@ -3,6 +3,11 @@ import google.generativeai as genai
 import requests
 import sqlite3
 import random
+import streamlit as st
+import google.generativeai as genai
+
+# 이 코드를 넣으면 화면 맨 위에 현재 서버가 쓰는 버전이 뜹니다.
+st.warning(f"현재 서버의 도구 버전: {genai.__version__}")
 from datetime import date
 
 # ⚡ [1. 설정] set_page_config는 무조건 맨 위!
