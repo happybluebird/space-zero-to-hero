@@ -52,9 +52,10 @@ except FileNotFoundError:
 
 genai.configure(api_key=GEMINI_KEY)
 
-# 🔥 [핵심 수정] models/ 를 떼어내고 이름만 깔끔하게 적었습니다.
-# 이제 버전 0.8.6과 완벽하게 호환됩니다.
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 🔥 [해결책] 엔진 교체 완료!
+# 최신(Flash) 대신 가장 안정적인 'gemini-pro'를 사용합니다.
+# 이 모델은 전 세계 어디서든 작동합니다.
+model = genai.GenerativeModel('gemini-pro')
 
 # DB 연결
 def get_db_connection():
@@ -170,7 +171,9 @@ if st.button(btn_label, use_container_width=True):
                 st.write(ai_text)
                 
     except Exception as e:
-        st.error(f"오류 발생: {e}")
+        # 에러가 나면 정확한 이유를 보여주도록 수정
+        st.error(f"⚠️ 시스템 오류 발생: {e}")
+        st.caption("잠시 후 다시 시도하거나, API 키 상태를 확인해주세요.")
 
 # Footer
 st.markdown("---")
