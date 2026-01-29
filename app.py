@@ -47,12 +47,14 @@ st.markdown("""
     }
 
     /* 망원경 뱃지 스타일 */
+    /* 망원경 및 탐사선 뱃지 스타일 (다양화) */
     .badge-hubble { background-color: #3A6EA5; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
     .badge-webb { background-color: #D4AF37; color: black; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
-    .badge-chandra { background-color: #884EA0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
-    .badge-spitzer { background-color: #E67E22; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
-    .badge-generic { background-color: #555; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
-
+    .badge-chandra { background-color: #8E44AD; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+    .badge-solar { background-color: #F1C40F; color: black; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; } /* 태양 - 노랑 */
+    .badge-mars { background-color: #E67E22; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; } /* 화성 - 주황 */
+    .badge-deep { background-color: #2C3E50; color: #00f2ff; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-right: 5px; border: 1px solid #00f2ff; } /* 심우주 - 네이비 */
+    .badge-generic { background-color: #555; color: #ddd; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -69,22 +71,48 @@ genai.configure(api_key=GEMINI_KEY)
 # 🔥 [안정화된 모델] Gemini Flash Latest 사용
 model = genai.GenerativeModel('gemini-flash-latest')
 
-# --- [3. 헬퍼 함수: 망원경 뱃지 감지기] ---
+# --- [3. 헬퍼 함수: 확장된 미션 뱃지 감지기] ---
 def get_telescope_badges(text):
     text_lower = text.lower()
-    badges = ""
+    badges = []
+
+    # 1. 우주 망원경 (Space Telescopes)
     if "hubble" in text_lower or "hst" in text_lower:
-        badges += '<span class="badge-hubble">🔭 Hubble Space Telescope</span>'
+        badges.append('<span class="badge-hubble">🔭 Hubble</span>')
     if "webb" in text_lower or "jwst" in text_lower:
-        badges += '<span class="badge-webb">🛰️ James Webb (JWST)</span>'
+        badges.append('<span class="badge-webb">🛰️ James Webb</span>')
     if "chandra" in text_lower:
-        badges += '<span class="badge-chandra">🟣 Chandra X-ray</span>'
+        badges.append('<span class="badge-chandra">🟣 Chandra X-ray</span>')
     if "spitzer" in text_lower:
-        badges += '<span class="badge-spitzer">🔴 Spitzer</span>'
-    
-    if badges == "":
-        badges = '<span class="badge-generic">📡 NASA Archive Data</span>'
-    return badges
+        badges.append('<span class="badge-mars">🔴 Spitzer</span>') # 적외선이라 붉은색 계열
+
+    # 2. 행성 탐사선 (Planetary Missions)
+    if "cassini" in text_lower:
+        badges.append('<span class="badge-deep">🪐 Cassini (Saturn)</span>')
+    if "juno" in text_lower:
+        badges.append('<span class="badge-deep">⚡ Juno (Jupiter)</span>')
+    if "voyager" in text_lower:
+        badges.append('<span class="badge-deep">🌌 Voyager</span>')
+    if "new horizons" in text_lower:
+        badges.append('<span class="badge-deep">🌑 New Horizons (Pluto)</span>')
+    if "galileo" in text_lower:
+        badges.append('<span class="badge-deep">🛰️ Galileo</span>')
+
+    # 3. 화성 로버 & 탐사선 (Mars)
+    if any(x in text_lower for x in ["perseverance", "curiosity", "opportunity", "spirit", "mars rover"]):
+        badges.append('<span class="badge-mars">🚙 Mars Rover</span>')
+    if "reconnaissance orbiter" in text_lower or "mro" in text_lower:
+        badges.append('<span class="badge-mars">🛰️ Mars Orbiter</span>')
+
+    # 4. 태양 관측 위성 (Solar)
+    if any(x in text_lower for x in ["sdo", "soho", "solar dynamics", "parker solar"]):
+        badges.append('<span class="badge-solar">☀ Solar Mission</span>')
+
+    # 5. 발견된 게 없으면 기본 뱃지
+    if not badges:
+        badges.append('<span class="badge-generic">📡 NASA Archive Data</span>')
+        
+    return "".join(badges)
 
 # --- [4. 사이드바: 전문가 대시보드] ---
 st.sidebar.title("🚀 MISSION CONTROL")
